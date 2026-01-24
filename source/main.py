@@ -49,10 +49,22 @@ print("Loading Whisper model...")
 whisper_model = whisper.load_model(WHISPER_MODEL)
 
 print("Loading pyannote diarization pipeline...")
+
+if torch.cuda.is_available():
+    print("Using GPU for pyannote.")
+    torch_device = "cuda"
+else:
+    print("Using CPU for pyannote.")
+    torch_device = "cpu"
+
+device = torch.device(torch_device)
+
 diarization_pipeline = Pipeline.from_pretrained(
     PYANNOTE_MODEL,
-    use_auth_token=HUGGINGFACE_TOKEN
+    use_auth_token=HUGGINGFACE_TOKEN,
 )
+
+diarization_pipeline.to(device)
 
 
 print(f"\nProcessing audio file: {AUDIO_FILE}\n")

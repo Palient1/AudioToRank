@@ -1,9 +1,27 @@
-FROM python:3.11-slim
+FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
+
+# Install Python 3.11
+RUN apt-get update && apt-get install -y \
+    python3.11 \
+    python3.11-venv \
+    python3.11-dev \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create symlinks for python and pip
+RUN ln -sf /usr/bin/python3.11 /usr/bin/python && \
+    ln -sf /usr/bin/python3.11 /usr/bin/python3
 
 WORKDIR /app
 
 # Suppress OpenBLAS warning
 ENV OPENBLAS_NUM_THREADS=1
+ENV HF_HOME=/root/.cache/huggingface
+
+ARG HUGGINGFACE_TOKEN
+ENV HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
+ARG PYANNOTE_MODEL=pyannote/speaker-diarization-3.1
+ENV PYANNOTE_MODEL=${PYANNOTE_MODEL}
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -15,10 +33,26 @@ RUN apt-get update && apt-get install -y \
 
 # Copy requirements
 COPY requirements-main.txt .
-RUN pip install --no-cache-dir -r requirements-main.txt
+RUN python -m pip install --no-cache-dir -r requirements-main.txt --index-url https://download.pytorch.org/whl/cu121 --extra-index-url https://pypi.org/simple/
 
 # Pre-download Whisper model to avoid checksum issues
 RUN python -c "import whisper; whisper.load_model('small')"
+
+# Pre-download pyannote pipeline so it is cached in the image
+RUN python - <<'PY'
+import os
+from pyannote.audio import Pipeline
+
+token = os.getenv("HUGGINGFACE_TOKEN")
+if not token:
+    raise SystemExit("HUGGINGFACE_TOKEN is required at build time to pre-download pyannote models.")
+
+model_id = os.getenv("PYANNOTE_MODEL", "pyannote/speaker-diarization-3.1")
+
+print(f"Downloading pyannote pipeline '{model_id}' for offline use...")
+Pipeline.from_pretrained(model_id, use_auth_token=token)
+print("Pyannote pipeline cached.")
+PY
 
 # Copy source code and audio files
 COPY source/ ./source/

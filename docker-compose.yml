@@ -9,14 +9,23 @@ services:
     container_name: ollama-server
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     ports:
       - "11434:11434"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
     # volumes:
     #   - ollama-data:/root/.ollama
     # networks:
     #   - audio-network
 
-  # LLM Agent service
+    # LLM Agent service
   llm-agent:
     build:
       context: .
@@ -33,7 +42,7 @@ services:
     # networks:
     #   - audio-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:5001/health" ]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -44,22 +53,33 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.main
+      args:
+        - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
+        - PYANNOTE_MODEL=${PYANNOTE_MODEL:-pyannote/speaker-diarization-3.1}
     container_name: audio-to-rank-main
     environment:
       - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
       - AUDIO_FILE=${AUDIO_FILE}
+      - PYANNOTE_MODEL=${PYANNOTE_MODEL:-pyannote/speaker-diarization-3.1}
       - LLM_AGENT_HOST=http://llm-agent:5001
     volumes:
       - ./audios:/app/audio_files
       - ./output:/app/output
     depends_on:
       - llm-agent
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
     # networks:
     #   - audio-network
 
 volumes:
   ollama-data:
 
-# networks:
-#   audio-network:
-#     driver: bridge
+    # networks:
+    #   audio-network:
+    #     driver: bridge
