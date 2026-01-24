@@ -1,7 +1,8 @@
 """
 LLM Agent Server - holds system prompt and handles analysis requests via HTTP
-Runs on localhost:5001
+Runs on localhost:5001 (locally) or 0.0.0.0:5001 (Docker)
 """
+import os
 import requests
 from flask import Flask, request, jsonify
 
@@ -26,8 +27,8 @@ SYSTEM_PROMPT = """Ты - профессиональный анализатор 
 Новая запись создана: [Да/Нет]
 Объяснение: [краткое объяснение с примерами]"""
 
-OLLAMA_API = "http://127.0.0.1:11434/api/generate"
-MODEL_NAME = "gemma3"
+OLLAMA_API = os.getenv("OLLAMA_API", "http://127.0.0.1:11434/api/generate")
+MODEL_NAME = os.getenv("MODEL_NAME", "gemma3")
 
 
 @app.route("/analyze", methods=["POST"])
@@ -47,16 +48,22 @@ def analyze():
         "stream": False
     }
     
+    print(f"[analyze] Sending request to Ollama at {OLLAMA_API}")
+    
     try:
-        response = requests.post(OLLAMA_API, json=payload, timeout=120)
+        print(f"[analyze] Calling Ollama with timeout=600...")
+        response = requests.post(OLLAMA_API, json=payload, timeout=600)
+        print(f"[analyze] Got response with status {response.status_code}")
         if response.status_code == 200:
             result = response.json()
             analysis = result.get("response", "").strip()
+            print(f"[analyze] Success, response length: {len(analysis)}")
             return jsonify({"analysis": analysis, "status": "success"})
         else:
+            print(f"[analyze] Ollama error: {response.status_code}")
             return jsonify({"error": f"Ollama error: {response.status_code}", "status": "error"}), 500
     except requests.exceptions.ConnectionError:
-        return jsonify({"error": "Cannot connect to Ollama on localhost:11434", "status": "error"}), 500
+        return jsonify({"error": f"Cannot connect to Ollama on {OLLAMA_API}", "status": "error"}), 500
     except Exception as e:
         return jsonify({"error": str(e), "status": "error"}), 500
 
@@ -69,14 +76,20 @@ def health():
 
 if __name__ == "__main__":
     PORT = 5001
-    print(f"LLM Agent Server starting on http://localhost:{PORT}")
+    # Detect if running in Docker or locally
+    IN_DOCKER = os.path.exists("/.dockerenv")
+    HOST = "0.0.0.0" if IN_DOCKER else "127.0.0.1"
+    
+    print(f"LLM Agent Server starting on http://{HOST}:{PORT}")
+    print(f"Running in: {'Docker' if IN_DOCKER else 'Local'}")
     print(f"Using model: {MODEL_NAME}")
+    print(f"Ollama API: {OLLAMA_API}")
     print(f"System prompt loaded.\n")
     print("Endpoints:")
     print(f"  POST /analyze - Send dialog_text, get analysis")
     print(f"  GET /health - Health check\n")
     try:
-        app.run(host="localhost", port=PORT, debug=False, threaded=True)
+        app.run(host=HOST, port=PORT, debug=False, threaded=True)
     except OSError as e:
         print(f"Error: {e}")
         print(f"Port {PORT} might be already in use. Try: lsof -i :{PORT}")
