@@ -15,7 +15,6 @@ RUN set -eux; \
     ollama pull gemma3; \
     kill ${SERVER_PID} || pkill -f "ollama serve" || true
 
-# EXPOSE 11434
 
-# Use exec form so signals are handled correctly
+
 ENTRYPOINT ["ollama","serve"]

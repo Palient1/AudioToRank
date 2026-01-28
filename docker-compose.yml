@@ -9,21 +9,8 @@ services:
     container_name: ollama-server
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     ports:
       - "11434:11434"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [ gpu ]
-    # volumes:
-    #   - ollama-data:/root/.ollama
-    # networks:
-    #   - audio-network
 
     # LLM Agent service
   llm-agent:
@@ -39,11 +26,9 @@ services:
       - "5001:5001"
     depends_on:
       - ollama
-    # networks:
-    #   - audio-network
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:5001/health" ]
-      interval: 30s
+      interval: 60s
       timeout: 5s
       retries: 5
       start_period: 30s
@@ -53,6 +38,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.main
+      target: cpu
       args:
         - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
         - PYANNOTE_MODEL=${PYANNOTE_MODEL:-pyannote/speaker-diarization-3.1}
@@ -64,22 +50,9 @@ services:
       - LLM_AGENT_HOST=http://llm-agent:5001
     volumes:
       - ./audios:/app/audio_files
-      - ./output:/app/output
+      #- ./output:/app/output
     depends_on:
       - llm-agent
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [ gpu ]
-    # networks:
-    #   - audio-network
 
 volumes:
   ollama-data:
-
-    # networks:
-    #   audio-network:
-    #     driver: bridge

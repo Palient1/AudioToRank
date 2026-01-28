@@ -96,13 +96,6 @@ diarization = diarization_pipeline(
 
 print("Diarization complete.\n")
 
-# print("Diarization results:")
-# print(diarization.speaker_diarization)
-
-# print("Transcription results:")
-# print(transcript)
-
-
 print("Step 3/3: Merging transcription with speaker labels...\n")
 
 formatted_segments = []
@@ -114,7 +107,7 @@ for segment in transcript:
     speaker = pick_best_speaker(start, end, diarization)
     formatted_segments.append({"speaker": speaker, "text": text, "start": start, "end": end})
 
-    print(f"[{speaker}] {start:.3f}–{end:.3f}: {text}")
+    #print(f"[{speaker}] {start:.3f}–{end:.3f}: {text}")
 
 print("\nProcessing finished!")
 
