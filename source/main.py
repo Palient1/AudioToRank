@@ -4,20 +4,25 @@ import whisper
 import torch.nn.functional as F
 import warnings
 import requests
+from dotenv import load_dotenv
 
 from pyannote.audio import Pipeline
 from pyannote.audio.core.task import Problem, Resolution, Specifications
-from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from prepare_audio import load_and_prepare_audio
 from transcription.pick_best_speaker import pick_best_speaker
 
-torch.serialization.add_safe_globals([
+load_dotenv()
+
+SAFE_GLOBALS = [
     Problem, 
     Specifications, 
     Resolution,
     torch.torch_version.TorchVersion
-])
+]
+
+if hasattr(torch, "serialization") and hasattr(torch.serialization, "add_safe_globals"):
+    torch.serialization.add_safe_globals(SAFE_GLOBALS)
 
 
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
@@ -44,10 +49,22 @@ print("Loading Whisper model...")
 whisper_model = whisper.load_model(WHISPER_MODEL)
 
 print("Loading pyannote diarization pipeline...")
+
+if torch.cuda.is_available():
+    print("Using GPU for pyannote.")
+    torch_device = "cuda"
+else:
+    print("Using CPU for pyannote.")
+    torch_device = "cpu"
+
+device = torch.device(torch_device)
+
 diarization_pipeline = Pipeline.from_pretrained(
     PYANNOTE_MODEL,
-    token=HUGGINGFACE_TOKEN
+    use_auth_token=HUGGINGFACE_TOKEN,
 )
+
+diarization_pipeline.to(device)
 
 
 print(f"\nProcessing audio file: {AUDIO_FILE}\n")
@@ -60,21 +77,24 @@ print("Transcription complete.\n")
 
 print("Step 2/3: Running speaker diarization with pyannote...")
 audio_input = load_and_prepare_audio(AUDIO_FILE)
+
+diarization_pipeline.instantiate({
+    "segmentation": {
+        "min_duration_off": 0.1
+    },
+    "clustering": {
+        "threshold": 0.9
+    }
+})
+
+
 diarization = diarization_pipeline(
     audio_input,
     min_speakers=2,
-    max_speakers=3,
-    segmentation={"min_duration_off": 0.1},
-    clustering={"threshold": 0.9}
-    )
+    max_speakers=3
+)
+
 print("Diarization complete.\n")
-
-# print("Diarization results:")
-# print(diarization.speaker_diarization)
-
-# print("Transcription results:")
-# print(transcript)
-
 
 print("Step 3/3: Merging transcription with speaker labels...\n")
 
@@ -87,7 +107,7 @@ for segment in transcript:
     speaker = pick_best_speaker(start, end, diarization)
     formatted_segments.append({"speaker": speaker, "text": text, "start": start, "end": end})
 
-    print(f"[{speaker}] {start:.3f}–{end:.3f}: {text}")
+    #print(f"[{speaker}] {start:.3f}–{end:.3f}: {text}")
 
 print("\nProcessing finished!")
 
@@ -107,7 +127,8 @@ payload = {
 }
 
 try:
-    response = requests.post(AGENT_API, json=payload, timeout=120)
+    print(f"Sending request to {AGENT_API} with timeout=600...")
+    response = requests.post(AGENT_API, json=payload, timeout=600)
     if response.status_code == 200:
         result = response.json()
         analysis = result.get("analysis", "No response")

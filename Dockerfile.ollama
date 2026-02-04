@@ -1,0 +1,20 @@
+FROM ollama/ollama:latest
+
+# Start a temporary ollama server during build, wait for its API, pull gemma3, then stop it.
+RUN set -eux; \
+    apt-get update && apt-get install -y --no-install-recommends curl procps && rm -rf /var/lib/apt/lists/*; \
+    ollama serve & \
+    SERVER_PID=$!; \
+    echo "waiting for ollama server..."; \
+    timeout=30; \
+    while ! curl -sSf http://127.0.0.1:11434/v1/models >/dev/null 2>&1; do \
+        timeout=$((timeout-1)); \
+        if [ "$timeout" -le 0 ]; then echo "ollama server failed to start"; kill ${SERVER_PID} || true; exit 1; fi; \
+        sleep 1; \
+    done; \
+    ollama pull gemma3; \
+    kill ${SERVER_PID} || pkill -f "ollama serve" || true
+
+
+
+ENTRYPOINT ["ollama","serve"]
