@@ -4,6 +4,11 @@ A pipeline for conversational audio analysis that combines speech-to-text, speak
 Uses Whisper, pyannote and gemma3.
 
 
+## ATTENTION!
+
+Filenames must have this format: \\
+"{Surname}\_{Name}\_{MiddleName}_{y}-{m}-{d}T{h}:{m}:{s}{TimeZone}.mp3"
+
 # Launch
 
 ### No GPU

@@ -22,10 +22,16 @@ services:
       - OLLAMA_API=http://ollama:11434/api/generate
       - MODEL_NAME=${LLM_MODEL}
       - FLASK_PORT=5001
+      - DB_HOST=data-base
+      - DB_PORT=5432
+      - DB_NAME=mydb
+      - DB_USER=myuser
+      - DB_PASSWORD=mypassword
     ports:
       - "5001:5001"
     depends_on:
       - ollama
+      - data-base
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:5001/health" ]
       interval: 60s
@@ -54,5 +60,21 @@ services:
     depends_on:
       - llm-agent
 
+  data-base:
+    image: postgres:16.9
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+
+
 volumes:
   ollama-data:
+  pgdata:
