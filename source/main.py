@@ -116,8 +116,8 @@ print("\nStep 4/4: Generating analysis via LLM Agent...\n")
 full_text = "\n".join([f"[{segment['speaker']}]: {segment['text']}" 
                        for segment in formatted_segments])
 
-worker_name = " ".join(AUDIO_FILE_NAME.split(".")[0].split("_")[:-1])
-record_time = AUDIO_FILE_NAME.split(".")[0].split("_")[-1]
+worker_name = " ".join(AUDIO_FILE_NAME.split("%")[:3])
+record_time = AUDIO_FILE_NAME.split(".")[0].split("%")[3]
 
 print("Worker name: " + worker_name)
 print("Record time: " + record_time)

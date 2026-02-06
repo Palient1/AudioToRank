@@ -14,7 +14,7 @@ app = Flask(__name__)
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
     "port": os.getenv("DB_PORT", "5432"),
-    "database": os.getenv("DB_NAME", "mydb"),
+    "dbname": os.getenv("DB_NAME", "mydb"),
     "user": os.getenv("DB_USER", "myuser"),
     "password": os.getenv("DB_PASSWORD", "mypassword")
 }

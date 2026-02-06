@@ -7,7 +7,7 @@ Uses Whisper, pyannote and gemma3.
 ## ATTENTION!
 
 Filenames must have this format: \\
-"{Surname}\_{Name}\_{MiddleName}_{y}-{m}-{d}T{h}:{m}:{s}{TimeZone}.mp3"
+"{Surname}%{Name}%{MiddleName}%{y}-{m}-{d}T{h}:{m}:{s}{TimeZone}.mp3"
 
 # Launch
 
