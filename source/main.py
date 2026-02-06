@@ -107,11 +107,8 @@ for segment in transcript:
     speaker = pick_best_speaker(start, end, diarization)
     formatted_segments.append({"speaker": speaker, "text": text, "start": start, "end": end})
 
-    #print(f"[{speaker}] {start:.3f}–{end:.3f}: {text}")
 
 print("\nProcessing finished!")
-
-
 
 
 print("\nStep 4/4: Generating analysis via LLM Agent...\n")
@@ -119,11 +116,18 @@ print("\nStep 4/4: Generating analysis via LLM Agent...\n")
 full_text = "\n".join([f"[{segment['speaker']}]: {segment['text']}" 
                        for segment in formatted_segments])
 
+worker_name = " ".join(AUDIO_FILE_NAME.split("%")[:3])
+record_time = AUDIO_FILE_NAME.split(".")[0].split("%")[3]
+
+print("Worker name: " + worker_name)
+print("Record time: " + record_time)
 print("Dialog for analysis:")
 print(f"{full_text}\n")
 
 payload = {
-    "dialog": full_text
+    "dialog": full_text,
+    "full_name": worker_name,
+    "record_time": record_time
 }
 
 try:
@@ -131,11 +135,30 @@ try:
     response = requests.post(AGENT_API, json=payload, timeout=600)
     if response.status_code == 200:
         result = response.json()
+        status = result.get("status", "unknown")
         analysis = result.get("analysis", "No response")
+        
         print(f"Analysis:\n{analysis}")
+        print(f"\nStatus: {status}")
+        
+        if result.get("db_saved"):
+            print("✓ Result saved to database")
+        else:
+            db_error = result.get("db_error", "Unknown error")
+            print(f"✗ Failed to save to database: {db_error}")
+            
+    elif response.status_code == 400:
+        result = response.json()
+        error = result.get("error", "Unknown error")
+        raw_response = result.get("raw_response", "")
+        print(f"Error parsing LLM response: {error}")
+        if raw_response:
+            print(f"Raw LLM response:\n{raw_response}")
     else:
         print(f"Error: {response.status_code}")
-        print(response.text)
+        result = response.json()
+        error = result.get("error", response.text)
+        print(f"Details: {error}")
 except requests.exceptions.ConnectionError:
     print(f"Error: Cannot connect to LLM Agent at {AGENT_API}")
     print("Make sure the LLM Agent service is running.")
