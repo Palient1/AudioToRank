@@ -61,6 +61,7 @@ RETURNS BIGINT AS $$
 DECLARE
   v_employee_id BIGINT;
   v_result_id BIGINT;
+  v_existing_id BIGINT;
 BEGIN
   -- Получаем сотрудника
   v_employee_id := get_employee_id(p_full_name);
@@ -69,6 +70,18 @@ BEGIN
   IF v_employee_id IS NULL THEN
     RAISE NOTICE 'Employee not found: %', p_full_name;
     RETURN NULL;
+  END IF;
+  
+  -- Проверяем, существует ли уже такая запись
+  SELECT id INTO v_existing_id 
+  FROM work_results 
+  WHERE employee_id = v_employee_id 
+    AND recorded_at = p_recorded_at;
+  
+  -- Если запись уже существует, возвращаем её id
+  IF v_existing_id IS NOT NULL THEN
+    RAISE NOTICE 'Record already exists for employee % at %', p_full_name, p_recorded_at;
+    RETURN v_existing_id;
   END IF;
   
   -- Вставляем результат работы
@@ -100,7 +113,7 @@ DECLARE
   v_employee_id BIGINT;
 BEGIN
   -- Добавляем тестового сотрудника напрямую
-  INSERT INTO employees (full_name) VALUES ('Иванов Иван Иванович')
+  INSERT INTO employees (full_name) VALUES ('Иванов Иван Иванович'), ('Монарх Ольга Геннадьевна')
   ON CONFLICT (full_name) DO NOTHING;
   
   -- Получаем id сотрудника
