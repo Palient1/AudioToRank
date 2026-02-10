@@ -1,7 +1,7 @@
 # AudioToRank
 A pipeline for conversational audio analysis that combines speech-to-text, speaker diarization, and LLM-based qualitative evaluation to measure politeness and adherence to communication standards for an individual speaker.
 
-Uses Whisper, pyannote and gemma3.
+Uses Whisper, NVIDIA NeMo and gemma3.
 
 
 ## ATTENTION!

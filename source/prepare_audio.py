@@ -1,16 +1,23 @@
-import torchaudio
+import os
+import subprocess
 
-def load_and_prepare_audio(path: str, target_sr: int = 48000, min_seconds: float = 10.0):
-    """Load audio, resample to target_sr, and pad to at least min_seconds."""
-    waveform, sr = torchaudio.load(path)
-    if sr != target_sr:
-        waveform = torchaudio.functional.resample(waveform, sr, target_sr)
-        sr = target_sr
 
-    min_samples = int(target_sr * min_seconds)
-    current = waveform.shape[-1]
-    if current < min_samples:
-        pad = min_samples - current
-        waveform = torchaudio.functional.pad(waveform, (0, pad))
+def convert_to_mono_wav(input_path: str, output_dir: str, target_sr: int = 16000) -> str:
+    """Convert any audio file to mono WAV at target_sr using ffmpeg.
+    
+    NeMo requires mono 16kHz WAV files for diarization.
+    Returns the path to the converted WAV file.
+    """
+    basename = os.path.splitext(os.path.basename(input_path))[0]
+    output_path = os.path.join(output_dir, f"{basename}.wav")
 
-    return {"waveform": waveform, "sample_rate": sr}
+    cmd = [
+        "ffmpeg", "-y", "-i", input_path,
+        "-ac", "1",
+        "-ar", str(target_sr),
+        "-acodec", "pcm_s16le",
+        output_path,
+    ]
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+
+    return output_path

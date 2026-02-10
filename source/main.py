@@ -2,32 +2,20 @@ import os
 import sys
 import warnings
 import argparse
+import tempfile
 from datetime import datetime, time, timezone
 from pathlib import Path
 
 import torch
 import whisper
-import torch.nn.functional as F
 import requests
 from dotenv import load_dotenv
+from nemo.collections.asr.models import ClusteringDiarizer
 
-from pyannote.audio import Pipeline
-from pyannote.audio.core.task import Problem, Resolution, Specifications
-
-from prepare_audio import load_and_prepare_audio
-from transcription.pick_best_speaker import pick_best_speaker
+from prepare_audio import convert_to_mono_wav
+from transcription.pick_best_speaker import pick_best_speaker, parse_rttm
 
 load_dotenv()
-
-SAFE_GLOBALS = [
-    Problem, 
-    Specifications, 
-    Resolution,
-    torch.torch_version.TorchVersion
-]
-
-if hasattr(torch, "serialization") and hasattr(torch.serialization, "add_safe_globals"):
-    torch.serialization.add_safe_globals(SAFE_GLOBALS)
 
 
 HUGGINGFACE_TOKEN = os.getenv("HUGGINGFACE_TOKEN")
@@ -39,7 +27,6 @@ DEFAULT_INPUT_DIR = (
 )
 
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "small")
-PYANNOTE_MODEL = os.getenv("PYANNOTE_MODEL", "pyannote/speaker-diarization-3.1")
 AGENT_API = os.getenv("LLM_AGENT_HOST", "http://localhost:5001") + "/analyze"
 
 
@@ -100,8 +87,7 @@ def should_process(file_dt: datetime, start_dt: datetime | None, end_dt: datetim
 def analyze_file(
     file_path: Path,
     whisper_model,
-    diarization_pipeline,
-    device: torch.device,
+    nemo_config: dict,
     full_name: str,
     record_time: str,
 ):
@@ -111,23 +97,45 @@ def analyze_file(
     transcript = whisper_model.transcribe(str(file_path))["segments"]
     print("Transcription complete.\n")
 
-    print("Step 2/3: Running speaker diarization with pyannote...")
-    audio_input = load_and_prepare_audio(str(file_path))
+    print("Step 2/3: Running speaker diarization with NeMo...")
 
-    diarization_pipeline.instantiate({
-        "segmentation": {
-            "min_duration_off": 0.1
-        },
-        "clustering": {
-            "threshold": 0.9
+    with tempfile.TemporaryDirectory() as tmpdir:
+        wav_path = convert_to_mono_wav(str(file_path), tmpdir)
+
+        # Create manifest for NeMo
+        manifest_path = os.path.join(tmpdir, "manifest.json")
+        import json
+        manifest_entry = {
+            "audio_filepath": wav_path,
+            "offset": 0,
+            "duration": None,
+            "label": "infer",
+            "text": "-",
+            "num_speakers": 2,
+            "rttm_filepath": None,
+            "uem_filepath": None,
         }
-    })
+        with open(manifest_path, "w") as f:
+            json.dump(manifest_entry, f)
+            f.write("\n")
 
-    diarization = diarization_pipeline(
-        audio_input,
-        min_speakers=2,
-        max_speakers=3
-    )
+        # Configure NeMo diarizer
+        from omegaconf import OmegaConf
+        cfg = OmegaConf.create(nemo_config)
+        cfg.diarizer.manifest_filepath = manifest_path
+        cfg.diarizer.out_dir = tmpdir
+
+        diarizer = ClusteringDiarizer(cfg=cfg)
+        diarizer.diarize()
+
+        # Parse RTTM output
+        rttm_dir = os.path.join(tmpdir, "speaker_outputs", "pred_rttms")
+        rttm_files = list(Path(rttm_dir).glob("*.rttm"))
+        if not rttm_files:
+            print("Warning: NeMo did not produce RTTM output")
+            diarization_segments = []
+        else:
+            diarization_segments = parse_rttm(str(rttm_files[0]))
 
     print("Diarization complete.\n")
 
@@ -139,7 +147,7 @@ def analyze_file(
         end = segment["end"]
         text = segment["text"]
 
-        speaker = pick_best_speaker(start, end, diarization)
+        speaker = pick_best_speaker(start, end, diarization_segments)
         formatted_segments.append({"speaker": speaker, "text": text, "start": start, "end": end})
 
     print("\nProcessing finished!")
@@ -219,20 +227,35 @@ def main():
     print("Loading Whisper model...")
     whisper_model = whisper.load_model(WHISPER_MODEL)
 
-    print("Loading pyannote diarization pipeline...")
-    if torch.cuda.is_available():
-        print("Using GPU for pyannote.")
-        torch_device = "cuda"
-    else:
-        print("Using CPU for pyannote.")
-        torch_device = "cpu"
+    print("Loading NeMo diarization config...")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Using {device.upper()} for NeMo.")
 
-    device = torch.device(torch_device)
-    diarization_pipeline = Pipeline.from_pretrained(
-        PYANNOTE_MODEL,
-        use_auth_token=HUGGINGFACE_TOKEN,
-    )
-    diarization_pipeline.to(device)
+    nemo_config = {
+        "diarizer": {
+            "manifest_filepath": None,
+            "out_dir": None,
+            "oracle_vad": False,
+            "clustering": {
+                "parameters": {
+                    "oracle_num_speakers": False,
+                    "max_num_speakers": 3,
+                }
+            },
+            "vad": {
+                "model_path": "vad_multilingual_marblenet",
+                "parameters": {
+                    "onset": 0.8,
+                    "offset": 0.6,
+                    "min_duration_on": 0.1,
+                    "min_duration_off": 0.3,
+                }
+            },
+            "speaker_embeddings": {
+                "model_path": "titanet_large",
+            },
+        }
+    }
 
     had_errors = False
     processed = 0
@@ -249,7 +272,7 @@ def main():
 
         processed += 1
         try:
-            ok = analyze_file(file_path, whisper_model, diarization_pipeline, device, full_name, record_time)
+            ok = analyze_file(file_path, whisper_model, nemo_config, full_name, record_time)
             if not ok:
                 had_errors = True
         except requests.exceptions.ConnectionError:

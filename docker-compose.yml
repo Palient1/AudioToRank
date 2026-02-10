@@ -45,18 +45,12 @@ services:
       context: .
       dockerfile: Dockerfile.main
       target: cpu
-      args:
-        - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
-        - PYANNOTE_MODEL=${PYANNOTE_MODEL:-pyannote/speaker-diarization-3.1}
     container_name: audio-to-rank-main
     environment:
-      - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
       - AUDIO_FILE=${AUDIO_FILE}
-      - PYANNOTE_MODEL=${PYANNOTE_MODEL:-pyannote/speaker-diarization-3.1}
       - LLM_AGENT_HOST=http://llm-agent:5001
     volumes:
       - ./audios:/app/audio_files
-      #- ./output:/app/output
     depends_on:
       - llm-agent
 
