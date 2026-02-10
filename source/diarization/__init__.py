@@ -1,0 +1,1 @@
+from .nemo_config import load_nemo_diar_base_cfg
