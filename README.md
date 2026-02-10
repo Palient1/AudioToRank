@@ -11,14 +11,33 @@ Filenames must have this format: \\
 
 # Launch
 
+## 1) Start services (DB + Ollama + Agent)
+
 ### No GPU
-```
-docker compose -f docker-compose.yml up --build
+```bash
+docker compose -f docker-compose.yml up --build data-base ollama llm-agent
 ```
 
 ### Nvidia
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build data-base ollama llm-agent
 ```
-docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
+
+## 2) Run main program on a folder
+
+### Process all files in a folder
+```bash
+python source/main.py --input-dir ./audios
+```
+
+### Process files within a period
+```bash
+python source/main.py --input-dir ./audios --start 2026-02-01 --end 2026-02-10
+```
+
+### Period with exact time
+```bash
+python source/main.py --input-dir ./audios --start 2026-02-01T08:00:00+03:00 --end 2026-02-01T12:00:00+03:00
 ```
 
 # Requirements
