@@ -1,16 +1,12 @@
-# Build tooling
-Cython==3.2.4          # latest (Jan 2026)
-setuptools==81.0.0     # keep pkg_resources (82.0.0 removed it!)
-wheel>=0.43.0
+## Build tooling (not used directly)
+# Cython==3.2.4          # latest (Jan 2026)
+# setuptools==81.0.0     # keep pkg_resources (82.0.0 removed it!)
+# wheel>=0.43.0
 python-dotenv==1.2.1
 
 # Core numeric stack (keep numba-compatible)
 numpy==2.3.3           # avoid numpy 2.4.x (breaks numba/whisper)
 numba==0.63.1          # latest stable (Dec 2025)
-
-# PyTorch (CPU/GPU — ставится одинаковой версией, но разными wheels)
-torch==2.10.0
-torchaudio==2.10.0
 
 # NeMo (ASR collection includes diarization utilities)
 nemo_toolkit[asr]==2.6.2
