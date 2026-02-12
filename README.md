@@ -11,7 +11,13 @@ Filenames must have this format: \\
 
 # Launch
 
-## 1) Start services (DB + Ollama + Agent)
+## 1) Setup (Python 3.11 + venv + deps)
+
+```bash
+./scripts/setup.sh
+```
+
+## 2) Start services (DB + Ollama + Agent)
 
 ### No GPU
 ```bash
@@ -23,7 +29,7 @@ docker compose -f docker-compose.yml up --build data-base ollama llm-agent
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build data-base ollama llm-agent
 ```
 
-## 2) Run main program on a folder
+## 3) Run main program on a folder
 
 ### Process all files in a folder
 ```bash
@@ -43,3 +49,23 @@ python source/main.py --input-dir ./audios --start 2026-02-01T08:00:00+03:00 --e
 # Requirements
 
 nvidia-container-toolkit (for GPU support)
+
+# .env reference
+
+```
+# Hugging Face Token
+HUGGINGFACE_TOKEN={hf_token}
+
+# LLM Agent settings
+LLM_AGENT_PORT=5001
+LLM_MODEL={llm_model}
+OLLAMA_HOST=http://ollama:11434
+
+# Whisper model
+WHISPER_MODEL={whisper_model}
+
+# Main app settings
+MAIN_APP_PORT=8000
+LLM_AGENT_HOST=http://localhost:5001
+
+```
