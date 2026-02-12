@@ -4,7 +4,7 @@ A pipeline for conversational audio analysis that combines speech-to-text, speak
 Uses Whisper, NVIDIA NeMo and gemma3.
 
 
-## ATTENTION!
+## ATTENTION
 
 Filenames must have this format: \\
 "{Surname}%{Name}%{MiddleName}%{y}-{m}-{d}T{h}:{m}:{s}{TimeZone}.mp3"

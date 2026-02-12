@@ -70,7 +70,8 @@ def find_nemo_diar_yaml() -> Path:
 
 def load_nemo_diar_base_cfg(
     device: str,
-    num_speakers: int = 2,
+    max_num_speakers: int = 3,
+    min_num_speakers: int = 2
 ):
     from omegaconf import OmegaConf
 
@@ -83,7 +84,7 @@ def load_nemo_diar_base_cfg(
         cfg["device"] = device
 
     cfg.diarizer.clustering.parameters.oracle_num_speakers = True
-    cfg.diarizer.clustering.parameters.max_num_speakers = num_speakers
-    cfg.diarizer.clustering.parameters.min_num_speakers = num_speakers
+    cfg.diarizer.clustering.parameters.max_num_speakers = max_num_speakers
+    cfg.diarizer.clustering.parameters.min_num_speakers = min_num_speakers
 
     return cfg, yaml_path

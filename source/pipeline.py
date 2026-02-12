@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -24,11 +25,11 @@ def analyze_file(
 ) -> bool:
     print(f"\nProcessing audio file: {file_path}\n")
 
-    print("Step 1/3: Transcribing audio with Whisper...")
+    print("Step 1/4: Transcribing audio with Whisper...")
     transcript = whisper_model.transcribe(str(file_path))["segments"]
     print("Transcription complete.\n")
 
-    print("Step 2/3: Running speaker diarization with NeMo...")
+    print("Step 2/4: Running speaker diarization with NeMo...")
 
     diar_out_root = Path(__file__).resolve().parent.parent / "output" / "diarization"
     try:
@@ -90,11 +91,12 @@ def analyze_file(
         else:
             diarization_segments = parse_rttm(str(rttm_files[0]))
     finally:
-        pass
+        if tmpdir and Path(tmpdir).exists():
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
     print("Diarization complete.\n")
 
-    print("Step 3/3: Merging transcription with speaker labels...\n")
+    print("Step 3/4: Merging transcription with speaker labels...\n")
 
     formatted_segments = []
     for segment in transcript:

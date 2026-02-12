@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import sys
 import warnings
-import argparse
 from pathlib import Path
 
 import torch
@@ -12,6 +11,7 @@ import requests
 from dotenv import load_dotenv
 
 from pipeline import analyze_file
+from cli.args import parse_cli_args
 from diarization.nemo_config import load_nemo_diar_base_cfg
 from utils import parse_user_datetime, parse_filename, should_process
 
@@ -34,13 +34,8 @@ warnings.filterwarnings("ignore")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Process audio files in a folder and send to LLM agent")
-    parser.add_argument("--input-dir", default=str(DEFAULT_INPUT_DIR), help="Folder with audio files")
-    parser.add_argument("--start", default=None, help="Start of period (YYYY-MM-DD or ISO datetime)")
-    parser.add_argument("--end", default=None, help="End of period (YYYY-MM-DD or ISO datetime)")
-    args = parser.parse_args()
-
-    input_dir = Path(args.input_dir)
+    args = parse_cli_args(DEFAULT_INPUT_DIR)
+    input_dir = args.input_dir
     if not input_dir.exists() or not input_dir.is_dir():
         print(f"Error: input directory not found: {input_dir}")
         sys.exit(1)
@@ -59,7 +54,7 @@ def main():
     print("Loading NeMo diarization config...")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using {device.upper()} for NeMo.")
-    diar_base_cfg, diar_yaml_path = load_nemo_diar_base_cfg(device=device, num_speakers=2)
+    diar_base_cfg, diar_yaml_path = load_nemo_diar_base_cfg(device=device, max_num_speakers=3, min_num_speakers=2)
 
     had_errors = False
     processed = 0
