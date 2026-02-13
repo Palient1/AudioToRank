@@ -1,0 +1,6 @@
+# PyTorch CPU wheels
+--index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://pypi.org/simple
+
+torch==2.10.0
+torchaudio==2.10.0

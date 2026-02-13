@@ -1,11 +1,7 @@
-version: '3.8'
-
 services:
   # Ollama service (LLM backend)
   ollama:
-    build:
-      context: .
-      dockerfile: Dockerfile.ollama
+    image: palient/ollama:latest
     container_name: ollama-server
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
@@ -14,9 +10,7 @@ services:
 
     # LLM Agent service
   llm-agent:
-    build:
-      context: .
-      dockerfile: Dockerfile.agent
+    image: palient/llm-agent:latest
     container_name: llm-agent
     environment:
       - OLLAMA_API=http://ollama:11434/api/generate
@@ -38,27 +32,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-
-  # Main application service
-  main-app:
-    build:
-      context: .
-      dockerfile: Dockerfile.main
-      target: cpu
-      args:
-        - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
-        - PYANNOTE_MODEL=${PYANNOTE_MODEL:-pyannote/speaker-diarization-3.1}
-    container_name: audio-to-rank-main
-    environment:
-      - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
-      - AUDIO_FILE=${AUDIO_FILE}
-      - PYANNOTE_MODEL=${PYANNOTE_MODEL:-pyannote/speaker-diarization-3.1}
-      - LLM_AGENT_HOST=http://llm-agent:5001
-    volumes:
-      - ./audios:/app/audio_files
-      #- ./output:/app/output
-    depends_on:
-      - llm-agent
 
   data-base:
     image: postgres:16.9

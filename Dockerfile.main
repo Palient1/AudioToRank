@@ -16,12 +16,6 @@ WORKDIR /app
 
 
 ENV OPENBLAS_NUM_THREADS=1
-ENV HF_HOME=/root/.cache/huggingface
-
-ARG HUGGINGFACE_TOKEN
-ENV HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
-ARG PYANNOTE_MODEL=pyannote/speaker-diarization-3.1
-ENV PYANNOTE_MODEL=${PYANNOTE_MODEL}
 
 
 COPY requirements-main.txt .
@@ -31,21 +25,12 @@ RUN python -m pip install --no-cache-dir -r requirements-main.txt
 # Pre-download Whisper model
 RUN python -c "import whisper; whisper.load_model('small')"
 
-# Pre-download pyannote pipeline
-RUN python - <<'PY'
-import os
-from pyannote.audio import Pipeline
-
-token = os.getenv("HUGGINGFACE_TOKEN")
-if not token:
-    raise SystemExit("HUGGINGFACE_TOKEN is required at build time to pre-download pyannote models.")
-
-model_id = os.getenv("PYANNOTE_MODEL", "pyannote/speaker-diarization-3.1")
-
-print(f"Downloading pyannote pipeline '{model_id}' for offline use...")
-Pipeline.from_pretrained(model_id, use_auth_token=token)
-print("Pyannote pipeline cached.")
-PY
+# Pre-download NeMo models (VAD + speaker embeddings)
+RUN python -c "\
+from nemo.collections.asr.models import EncDecClassificationModel, EncDecSpeakerLabelModel; \
+EncDecClassificationModel.from_pretrained('vad_multilingual_marblenet'); \
+EncDecSpeakerLabelModel.from_pretrained('titanet_large'); \
+print('NeMo models cached.')"
 
 WORKDIR /app/source
 COPY source/ ./
@@ -76,12 +61,9 @@ WORKDIR /app
 
 
 ENV OPENBLAS_NUM_THREADS=1
-ENV HF_HOME=/root/.cache/huggingface
 
 ARG HUGGINGFACE_TOKEN
 ENV HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
-ARG PYANNOTE_MODEL=pyannote/speaker-diarization-3.1
-ENV PYANNOTE_MODEL=${PYANNOTE_MODEL}
 
 
 COPY requirements-main.txt .
@@ -90,21 +72,12 @@ RUN python -m pip install --no-cache-dir -r requirements-main.txt --index-url ht
 # Pre-download Whisper model
 RUN python -c "import whisper; whisper.load_model('small')"
 
-# Pre-download pyannote pipeline
-RUN python - <<'PY'
-import os
-from pyannote.audio import Pipeline
-
-token = os.getenv("HUGGINGFACE_TOKEN")
-if not token:
-    raise SystemExit("HUGGINGFACE_TOKEN is required at build time to pre-download pyannote models.")
-
-model_id = os.getenv("PYANNOTE_MODEL", "pyannote/speaker-diarization-3.1")
-
-print(f"Downloading pyannote pipeline '{model_id}' for offline use...")
-Pipeline.from_pretrained(model_id, use_auth_token=token)
-print("Pyannote pipeline cached.")
-PY
+# Pre-download NeMo models (VAD + speaker embeddings)
+RUN python -c "\
+from nemo.collections.asr.models import EncDecClassificationModel, EncDecSpeakerLabelModel; \
+EncDecClassificationModel.from_pretrained('vad_multilingual_marblenet'); \
+EncDecSpeakerLabelModel.from_pretrained('titanet_large'); \
+print('NeMo models cached.')"
 
 WORKDIR /app/source
 COPY source/ ./
@@ -130,47 +103,3 @@ ENTRYPOINT ["python", "main.py"]
 # # Create symlinks for python and pip
 # RUN ln -sf /usr/bin/python3.11 /usr/bin/python && \
 #     ln -sf /usr/bin/python3.11 /usr/bin/python3
-
-# WORKDIR /app
-
-# # Suppress OpenBLAS warning
-# ENV OPENBLAS_NUM_THREADS=1
-# ENV HF_HOME=/root/.cache/huggingface
-
-# ARG HUGGINGFACE_TOKEN
-# ENV HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN}
-# ARG PYANNOTE_MODEL=pyannote/speaker-diarization-3.1
-# ENV PYANNOTE_MODEL=${PYANNOTE_MODEL}
-
-# # Copy requirements
-# COPY requirements-main.txt .
-# RUN python -m pip install --no-cache-dir -r requirements-main.txt --index-url https://download.pytorch.org/whl/cu121 --extra-index-url https://pypi.org/simple/
-
-# # Pre-download Whisper model to avoid checksum issues
-# RUN python -c "import whisper; whisper.load_model('small')"
-
-# # Pre-download pyannote pipeline so it is cached in the image
-# RUN python - <<'PY'
-# import os
-# from pyannote.audio import Pipeline
-
-# token = os.getenv("HUGGINGFACE_TOKEN")
-# if not token:
-#     raise SystemExit("HUGGINGFACE_TOKEN is required at build time to pre-download pyannote models.")
-
-# model_id = os.getenv("PYANNOTE_MODEL", "pyannote/speaker-diarization-3.1")
-
-# print(f"Downloading pyannote pipeline '{model_id}' for offline use...")
-# Pipeline.from_pretrained(model_id, use_auth_token=token)
-# print("Pyannote pipeline cached.")
-# PY
-
-# # Copy source code and audio files
-# COPY source/ ./source/
-# COPY audios/ /app/audio_files/
-
-# # Create output directory
-# RUN mkdir -p /app/output
-
-# WORKDIR /app/source
-# ENTRYPOINT ["python", "main.py"]

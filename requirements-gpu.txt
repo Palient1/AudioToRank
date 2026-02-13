@@ -1,0 +1,6 @@
+# PyTorch CUDA wheels (adjust CUDA version if needed)
+--index-url https://download.pytorch.org/whl/cu124
+--extra-index-url https://pypi.org/simple
+
+torch==2.10.0
+torchaudio==2.10.0

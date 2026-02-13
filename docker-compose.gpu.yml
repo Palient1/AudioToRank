@@ -14,14 +14,6 @@ services:
               count: all
               capabilities: [gpu]
 
-  main-app:
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
 
 # TODO
 # Check if this works

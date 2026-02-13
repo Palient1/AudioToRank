@@ -1,20 +1,25 @@
+## Build tooling (not used directly)
+# Cython==3.2.4          # latest (Jan 2026)
+# setuptools==81.0.0     # keep pkg_resources (82.0.0 removed it!)
+# wheel>=0.43.0
+python-dotenv==1.2.1
 
-numpy==1.26.4
+# Core numeric stack (keep numba-compatible)
+numpy==2.3.3           # avoid numpy 2.4.x (breaks numba/whisper)
+numba==0.63.1          # latest stable (Dec 2025)
 
-torch==2.1.2
-torchaudio==2.1.2
+# NeMo (ASR collection includes diarization utilities)
+nemo_toolkit[asr]==2.6.2
+omegaconf==2.3.0
 
-pyannote.audio==3.1.1
+# Whisper (official PyPI dist)
+openai-whisper==20250625
 
+# HF + env
+huggingface_hub==0.30.2
+transformers==4.53.3
 
-torchmetrics==1.2.1
-pytorch-lightning==2.1.3
-
-openai-whisper
-huggingface_hub==0.20.3
-python-dotenv==1.0.1
-
-
+# Audio / utils
+librosa==0.11.0
+soundfile==0.13.1
 requests==2.32.3
-librosa==0.10.2.post1
-soundfile==0.12.1
