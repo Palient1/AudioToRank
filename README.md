@@ -32,6 +32,7 @@ docker compose -f docker-compose.yml up data-base ollama llm-agent
 
 ### Nvidia
 ```bash
+docker pull postgres:16.9
 docker pull palient/ollama:latest
 docker pull palient/llm-agent:latest
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml up data-base ollama llm-agent
