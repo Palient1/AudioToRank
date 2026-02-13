@@ -15,27 +15,31 @@ Filenames must have this format: \\
 
 Python 3.11 is required.
 
-
 ```bash
-pip install -r requirements-main.txt -r requirements-сpu.txt -r requirements.txt
+pip install -r requirements-сpu.txt -r requirements-main.txt -r requirements.txt
 ```
 You can download `requirements-gpu.txt` instead of `requirements-сpu.txt` if you are going to compute with Nvidia GPU.
+Attention: order matters, `requirements-main.txt` should be installed after `requirements-сpu.txt` or `requirements-gpu.txt` to avoid conflicts.
 
 ## 2) Start services (DB + Ollama + Agent)
 
 ### No GPU
 ```bash
-docker pull palient/ollama:latest palient/llm-agent:latest
+docker pull palient/ollama:latest
+docker pull palient/llm-agent:latest
 docker compose -f docker-compose.yml up data-base ollama llm-agent
 ```
 
 ### Nvidia
 ```bash
-docker pull palient/ollama:latest palient/llm-agent:latest
+docker pull palient/ollama:latest
+docker pull palient/llm-agent:latest
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml up data-base ollama llm-agent
 ```
 
 ## 3) Run main program on a folder
+
+Before running the main program, make sure to set up the `.env` file with the appropriate values for your environment. Furthermore, ensure that the audio files you want to process are named according to the specified format and are located in the correct directory (e.g., `./audios`).
 
 ### Process all files in a folder
 ```bash
@@ -55,18 +59,6 @@ python source/main.py --input-dir ./audios --start 2026-02-01T08:00:00+03:00 --e
 # Requirements
 
 nvidia-container-toolkit (for GPU support)
-
-# Docker Hub (publish images)
-
-```bash
-# Ollama + LLM Agent
-docker buildx build -f Dockerfile.ollama -t palient/ollama:latest --push .
-docker buildx build -f Dockerfile.agent -t palient/llm-agent:latest --push .
-
-# Main app (optional, CPU/GPU tags)
-docker buildx build -f Dockerfile.main --target cpu -t palient/audio-to-rank-main:cpu --push .
-docker buildx build -f Dockerfile.main --target gpu -t palient/audio-to-rank-main:gpu --push .
-```
 
 # .env reference
 
