@@ -6,7 +6,8 @@ Uses Whisper, NVIDIA NeMo and gemma3.
 
 ## ATTENTION
 
-Filenames must have this format: \\
+Filenames must have this format:
+
 "{Surname}%{Name}%{MiddleName}%{y}-{m}-{d}T{h}:{m}:{s}{TimeZone}.mp3"
 
 # Launch
@@ -25,6 +26,7 @@ Attention: order matters, `requirements-main.txt` should be installed after `req
 
 ### No GPU
 ```bash
+docker pull postgres:16.9
 docker pull palient/ollama:latest
 docker pull palient/llm-agent:latest
 docker compose -f docker-compose.yml up data-base ollama llm-agent
